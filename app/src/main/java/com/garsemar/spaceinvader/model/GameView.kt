@@ -6,22 +6,29 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Point
+import android.os.Build
 import android.util.Size
 import android.view.MotionEvent
 import android.view.SurfaceView
+import androidx.annotation.RequiresApi
+import androidx.navigation.Navigation.findNavController
+import androidx.navigation.findNavController
+import com.garsemar.spaceinvader.GameFragmentDirections
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("ViewConstructor")
 class GameView(context: Context, private val size: Size) : SurfaceView(context) {
     val player = Player(context, size.width, size.height)
-    val enemy = Enemy(context, size.width, size.height)
-    val shot = Shot(context, size.width, size.height)
+    val enemy = mutableListOf<Enemy>()
     val playing = true
-    var shotAction = false
+    var shotAction = mutableListOf<Shot>()
     val score = 0
+    var enemyPosX = 30
+    var enemyPosY = 0
 
     companion object{
         var canvas: Canvas = Canvas()
@@ -30,14 +37,29 @@ class GameView(context: Context, private val size: Size) : SurfaceView(context) 
 
     init {
         startGame()
+        repeat(20){
+            enemy.add(Enemy(context, size.width, size.height))
+            if(enemyPosX > size.width-100){
+                enemyPosY += 160
+                enemyPosX = 0
+            }
+
+            enemy.last().positionX = enemyPosX
+            enemy.last().positionY = enemyPosY
+
+            enemyPosX += 160
+        }
     }
 
     fun shot(){
-        shot.positionY = player.positionY
-        shot.positionX = player.positionX
-        shotAction = true
+        if(shotAction.size < 3){
+            shotAction.add(Shot(context, size.width, size.height))
+            shotAction.last().positionY = player.positionY
+            shotAction.last().positionX = player.positionX
+        }
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     fun startGame(){
         CoroutineScope(Dispatchers.Main).launch{
             while(playing){
@@ -55,23 +77,41 @@ class GameView(context: Context, private val size: Size) : SurfaceView(context) 
             //SCORE
 
             //Shot
-            if(shotAction){
-                canvas.drawBitmap(shot.bitmap, shot.positionX.toFloat(), shot.positionY.toFloat(), paint)
+            shotAction.forEach {
+                canvas.drawBitmap(it.bitmap, it.positionX.toFloat(), it.positionY.toFloat(), paint)
             }
             //ENEMY
-            canvas.drawBitmap(enemy.bitmap, enemy.positionX.toFloat(),0f, paint)
+            enemy.forEach {
+                canvas.drawBitmap(it.bitmap, it.positionX.toFloat(),it.positionY.toFloat(), paint)
+            }
             //PLAYER
             canvas.drawBitmap(player.bitmap, player.positionX.toFloat(), player.positionY.toFloat(), paint)
             holder.unlockCanvasAndPost(canvas)
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     fun update(){
-        enemy.updateEnemy()
-        player.updatePlayer()
-        if(shotAction){
-            shot.updateShot()
+        enemy.removeIf {
+            shotAction.any { shotIt ->
+                it.positionX < shotIt.positionX + shotIt.width &&
+                        it.positionX + it.width > shotIt.positionX &&
+                it.positionY < shotIt.positionY + height &&
+                        it.positionY + it.height > shotIt.positionY
+            }
         }
+        enemy.forEach {
+            if(it.updateEnemy()){
+                val action = GameFragmentDirections.actionGameFragmentToResultFragment()
+                findNavController().navigate(action)
+            }
+        }
+        player.updatePlayer()
+        shotAction.forEach{
+            it.updateShot()
+        }
+        shotAction.removeIf { it.positionY in (-50 downTo -70) }
+        println(shotAction.size)
     }
 
     @SuppressLint("ClickableViewAccessibility")

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.Point
+import android.os.Build
 import android.os.Bundle
 import android.util.Size
 import androidx.fragment.app.Fragment
@@ -13,11 +14,13 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.RelativeLayout
+import androidx.annotation.RequiresApi
 import com.garsemar.spaceinvader.model.GameView
 
 class GameFragment : Fragment() {
     lateinit var gameView: GameView
     lateinit var fireButton: Button
+    @RequiresApi(Build.VERSION_CODES.N)
     @SuppressLint("SetTextI18n")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -51,6 +54,7 @@ class GameFragment : Fragment() {
         return game
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         fireButton.setOnClickListener {
